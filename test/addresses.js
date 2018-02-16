@@ -620,4 +620,83 @@ describe('Addresses', function() {
       });
     });
   });
+  describe('#checkAddrs', function() {
+    var validAddresses = [
+      'mrX9vMRYLfVy1BnZbc5gZjuyaqH3ZW2ZHz',
+      '2NBFNJTktNa7GZusGbDbGKRZTxdK9VVez3n',
+      'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'
+    ];
+    var invalidAddresses = [
+      '1MirQ9bwyQcGVJPwKUgapu5ouK2E2Ey4gX',
+      '3QJmV3qfvL9SuYo34YihAf3sRCW3qSinyC',
+      'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+      '23jljndsaf093',
+      '--55=='
+    ];
+    var node = { network: 'testnet', services: { address: {} } };
+    var addresses = new AddressController(node);
+
+    validAddresses.map(function(addr) {
+      it('accepts address ' + addr, function() {
+        var req = { body: {}, params: { addr: addr } };
+        var send = sinon.stub();
+        var status = sinon.stub().returns({send: send});
+        var res = { status: status };
+        var next = sinon.stub();
+        addresses.checkAddrs(req, res, next);
+        should.exist(req.addr);
+        should.exist(req.addrs);
+        req.addr.should.equal(addr);
+        req.addrs.should.deepEqual([addr]);
+        send.callCount.should.equal(0);
+        next.callCount.should.equal(1);
+      });
+    });
+
+    invalidAddresses.map(function(addr) {
+      it('rejects address ' + addr, function() {
+        var req = { body: {}, params: { addr: addr } };
+        var send = sinon.stub();
+        var status = sinon.stub().returns({send: send});
+        var res = { status: status };
+        var next = sinon.stub();
+        addresses.checkAddrs(req, res, next);
+        should.exist(req.addr);
+        should.exist(req.addrs);
+        req.addr.should.equal(addr);
+        req.addrs.should.deepEqual([addr]);
+        send.callCount.should.equal(1);
+        next.callCount.should.equal(0);
+      });
+    });
+
+    it('accepts multiple addresses', function() {
+      var req = { body: {}, params: { addrs: validAddresses[0]+','+validAddresses[1] } };
+      var send = sinon.stub();
+      var status = sinon.stub().returns({send: send});
+      var res = { status: status };
+      var next = sinon.stub();
+      addresses.checkAddrs(req, res, next);
+      should.exist(req.addr);
+      should.exist(req.addrs);
+      req.addr.should.equal(validAddresses[0]);
+      req.addrs.should.deepEqual([validAddresses[0], validAddresses[1]]);
+      send.callCount.should.equal(0);
+      next.callCount.should.equal(1);
+    });
+
+    it('rejects multiple addresses when one is invalid', function() {
+      var req = { body: {}, params: { addrs: validAddresses[0]+','+invalidAddresses[0] } };
+      var send = sinon.stub();
+      var status = sinon.stub().returns({send: send});
+      var res = { status: status };
+      var next = sinon.stub();
+      addresses.checkAddrs(req, res, next);
+      should.not.exist(req.addr);
+      should.exist(req.addrs);
+      req.addrs.should.deepEqual([validAddresses[0], invalidAddresses[0]]);
+      send.callCount.should.equal(1);
+      next.callCount.should.equal(0);
+    });
+  });
 });
